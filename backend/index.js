@@ -1,26 +1,36 @@
-// backend/index.js
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
-const sequelize = require("./config/db");  // Импортируем sequelize для использования базы данных
-
-dotenv.config();  // Загружаем переменные из .env
+require("dotenv").config();
+const { authenticateDB, sequelize } = require("./config/db");
+const userRoutes = require("./routes/users");
+const eventRoutes = require("./routes/events");
 
 const app = express();
 
-app.use(express.json());  // Для обработки JSON-запросов
-app.use(cors());  // Для разрешения кросс-доменных запросов
+// Настройка middleware
+app.use(cors()); // Разрешаем кросс-доменные запросы
+app.use(express.json()); // Для парсинга JSON данных
 
-const PORT = process.env.PORT || 5000;
+// Подключаем маршруты
+app.use("/users", userRoutes);
+app.use("/events", eventRoutes);
 
-// Главный маршрут для проверки работы сервера
-app.get("/", (req, res) => {
-    res.json({ message: "Сервер работает!" });
+// Проверяем соединение с базой данных
+authenticateDB();
+
+// Синхронизация базы данных
+sequelize.sync({ force: false }).then(() => {
+    console.log("База данных синхронизирована");
+}).catch((error) => {
+    console.error("Ошибка синхронизации базы данных:", error);
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 5000; // Порт для сервера
+app.listen(PORT, (err) => {
+    if (err) {
+        console.error("Ошибка при запуске сервера:", err);
+        process.exit(1);
+    }
     console.log(`Сервер запущен на http://localhost:${PORT}`);
-}).on("error", (err) => {
-    console.error("Ошибка сервера:", err);
 });
