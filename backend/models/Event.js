@@ -27,6 +27,11 @@ const Event = sequelize.define("Event", {
             key: "id",
         },
     },
+    deletedAt: {
+        type: DataTypes.DATE,
+    }
+}, {
+    paranoid: true // Включаем мягкое удаление
 });
 
 // Связь "Один ко многим"
