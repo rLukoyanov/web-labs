@@ -1,7 +1,10 @@
-    const { DataTypes } = require("sequelize");
-    const { sequelize } = require("../config/db");
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/db");
+const bcrypt = require("bcryptjs");
 
-    const User = sequelize.define("User", {
+const User = sequelize.define(
+    "User",
+    {
         id: {
             type: DataTypes.UUID,
             defaultValue: DataTypes.UUIDV4,
@@ -19,15 +22,22 @@
                 isEmail: true,
             },
         },
-        createdAt: {
-            type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW,
+        password: {
+            type: DataTypes.STRING,
+            allowNull: false,
         },
         deletedAt: {
             type: DataTypes.DATE,
-        }
-    }, {
-        paranoid: true // Включаем мягкое удаление
-    });
+        },
+    },
+    {
+        paranoid: true,
+    }
+);
 
-    module.exports = User;
+User.beforeCreate(async (user) => {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(user.password, salt);
+});
+
+module.exports = User;
