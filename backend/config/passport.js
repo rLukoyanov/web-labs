@@ -12,6 +12,12 @@ passport.use(new JwtStrategy(opts, async (jwtPayload, done) => {
   try {
     // Получение токена 
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(this._req);
+    // Проверяем, не в черном ли списке токен
+    const isBlacklisted = await BlacklistedToken.findOne({ where: { token } });
+    
+    if (isBlacklisted) {
+      return done(null, false);
+    }
     // Поиск пользователя
     const user = await User.findByPk(jwtPayload.id);
     if (user) {
