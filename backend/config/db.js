@@ -1,7 +1,6 @@
 const { Sequelize } = require("sequelize");
 require("dotenv").config();
 
-// Создаём объект Sequelize с параметрами подключения
 const sequelize = new Sequelize(
     process.env.DB_NAME,     // Название БД
     process.env.DB_USER,     // Пользователь
@@ -24,5 +23,18 @@ const authenticateDB = async () => {
     }
 };
 
-// Экспортируем объект для использования в моделях
-module.exports = { sequelize, authenticateDB };
+// Функция для принудительной синхронизации (пересоздания) таблиц
+const syncDB = async () => {
+    try {
+        await sequelize.sync({ force: false }); // force: true пересоздает таблицы
+        console.log("Таблицы успешно пересозданы");
+    } catch (error) {
+        console.error("Ошибка при синхронизации БД:", error);
+    }
+};
+
+module.exports = { 
+    sequelize, 
+    authenticateDB,
+    syncDB
+};

@@ -2,84 +2,168 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const morgan = require("morgan");
-const { authenticateDB, sequelize } = require("./config/db");
+const { authenticateDB, syncDB } = require("./config/db");
 const userRoutes = require("./routes/users");
 const eventRoutes = require("./routes/events");
+const authRoutes = require("./routes/auth");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const passport = require("passport");
+require("./config/passport");
 
 const app = express();
 
-// Настройка Swagger
+// Улучшенная конфигурация Swagger
 const swaggerOptions = {
   definition: {
-    openapi: "3.0.0", // Версия OpenAPI
+    openapi: "3.0.0",
     info: {
-      title: "API Documentation", // Название документации
-      version: "1.0.0", // Версия API
-      description: "Документация для API приложения", // Описание
+      title: "Event Management API",
+      version: "1.0.0",
+      description: "Документация для API управления мероприятиями и пользователями",
+      contact: {
+        name: "Поддержка",
+        email: "support@example.com"
+      },
+      license: {
+        name: "MIT",
+      }
     },
+    tags: [
+      {
+        name: "Auth",
+        description: "Аутентификация и авторизация"
+      },
+      {
+        name: "Users",
+        description: "Операции с пользователями"
+      },
+      {
+        name: "Events",
+        description: "Управление мероприятиями"
+      }
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Введите JWT токен в формате: Bearer <ваш_токен>"
+        }
+      },
+      schemas: {
+        ErrorResponse: {
+          type: "object",
+          properties: {
+            success: {
+              type: "boolean",
+              example: false
+            },
+            message: {
+              type: "string",
+              example: "Произошла ошибка"
+            }
+          }
+        }
+      }
+    },
+    security: [{
+      bearerAuth: []
+    }],
     servers: [
       {
-        url: "http://localhost:5000", // URL вашего сервера
+        url: "http://localhost:5000",
+        description: "Локальный сервер разработки"
       },
+      {
+        url: "https://api.yourdomain.com",
+        description: "Продакшен сервер"
+      }
     ],
   },
-  apis: ["./routes/*.js"], // Путь к файлам, содержащим описание API (ваши маршруты)
+  apis: ["./routes/*.js", "./models/*.js"], // Добавлено сканирование моделей
 };
 
-// Генерация документации с помощью swagger-jsdoc
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Подключение Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(morgan("dev"));
+app.use(passport.initialize());
 
-// Кастомный middleware для логирования
+// Улучшенное логирование запросов
 const logRequests = (req, res, next) => {
-  const currentTime = new Date().toISOString();
-  console.log(`[${currentTime}] ${req.method} ${req.originalUrl}`);
-  next(); // Передаем управление следующему middleware или маршруту
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${req.ip}`);
+  next();
 };
-
-// Настройка middleware
-app.use(cors()); // Разрешаем кросс-доменные запросы
-app.use(express.json()); // Для парсинга JSON данных
-
-// Добавление morgan для логирования
-app.use(morgan("dev")); // Логирование запросов с использованием morgan (формат "dev" показывает HTTP-метод, путь и статус код)
-
-// Логируем все запросы через кастомный middleware
 app.use(logRequests);
 
-// Обработчик для корня
+// Улучшенная настройка Swagger UI
+app.use("/api-docs", 
+  swaggerUi.serve, 
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true,
+      defaultModelsExpandDepth: -1, // Скрываем раздел моделей
+      docExpansion: "list", // Разворачиваем только текущий endpoint
+      filter: true, // Включаем поиск
+      displayRequestDuration: true, // Показываем время выполнения
+      tryItOutEnabled: true // Включаем "Try it out" по умолчанию
+    },
+    customSiteTitle: "Event Management API Docs",
+    customfavIcon: "/favicon.ico",
+    customCss: '.swagger-ui .topbar { display: none }'
+  })
+);
+
+// Роуты
 app.get("/", (req, res) => {
-  res.send("API работает!");
+  res.json({
+    message: "API работает!",
+    docs: "/api-docs",
+    status: "OK"
+  });
 });
 
-// Подключаем маршруты
+app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/events", eventRoutes);
 
-// Проверяем соединение с базой данных
-authenticateDB();
-
-// Синхронизация базы данных
-sequelize.sync({ force: false }).then(() => {
-  console.log("База данных синхронизирована");
-}).catch((error) => {
-  console.error("Ошибка синхронизации базы данных:", error);
+// Улучшенная обработка ошибок
+app.use((err, req, res, next) => {
+  console.error(`[ERROR] ${err.stack}`);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack })
+  });
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 5000; // Порт для сервера
-app.listen(PORT, (err) => {
-  if (err) {
-    console.error("Ошибка при запуске сервера:", err);
+// Асинхронная инициализация БД
+const initializeDB = async () => {
+  try {
+    await authenticateDB();
+    await syncDB();
+    console.log("База данных подключена и синхронизирована");
+  } catch (err) {
+    console.error("Ошибка инициализации БД:", err.message);
     process.exit(1);
   }
-  console.log(`Сервер запущен на http://localhost:${PORT}`);
-});
+};
 
-// curl -X GET http://localhost:5000/users
-// curl -X POST http://localhost:5000/users -H "Content-Type: application/json" -d '{"name": "qweqwe", "email": "qweqweq@mail.ru"}'
-// curl -X POST http://localhost:5000/events -H "Content-Type: application/json" -d '{"title": "Tech Conference 2025", "description": "An exciting tech event focused on the future of AI.", "date": "2025-06-15T10:00:00.000Z", "createdBy": "762ea839-3318-40fd-b8bd-e07c07244e34"}'
+// Запуск сервера
+const PORT = process.env.PORT || 5000;
+
+initializeDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Сервер запущен на http://localhost:${PORT}`);
+      console.log(`Документация доступна по http://localhost:${PORT}/api-docs`);
+    });
+  })
+  .catch(err => {
+    console.error("Ошибка при запуске сервера:", err.message);
+  });
