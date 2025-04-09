@@ -30,5 +30,5 @@ BlacklistedToken.beforeCreate(async (instance) => {
   }
 });
 
-// Экспортируем модель для использования в других частях приложения
+// Экспортируем модель для использования в других частях приложения.
 module.exports = BlacklistedToken;
