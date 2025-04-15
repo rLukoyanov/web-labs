@@ -1,7 +1,8 @@
-const express = require("express");
-const User = require("../models/User");
+import { Router, Request, Response } from 'express';
+import { User } from '@models/User';
+import { literal, CreationAttributes } from 'sequelize';
 
-const router = express.Router();
+const router = Router();
 
 /**
  * @swagger
@@ -21,15 +22,19 @@ const router = express.Router();
  *       500:
  *         description: Ошибка при получении пользователей
  */
-router.get("/", async (req, res) => {
-    try {
-        const users = await User.findAll({
-            where: { deletedAt: null } // фильтруем удалённых пользователей
-        });
-        res.status(200).json(users);
-    } catch (error) {
-        res.status(500).json({ error: "Ошибка при получении пользователей", details: error.message });
-    }
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const users = await User.findAll({
+      where: literal('"deletedAt" IS NULL') as any, // ✅ обход строгой типизации
+    });
+
+    res.status(200).json(users);
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Ошибка при получении пользователей',
+      details: error.message,
+    });
+  }
 });
 
 /**
@@ -44,6 +49,9 @@ router.get("/", async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - email
  *             properties:
  *               name:
  *                 type: string
@@ -58,24 +66,32 @@ router.get("/", async (req, res) => {
  *       500:
  *         description: Ошибка при создании пользователя
  */
-router.post("/", async (req, res) => {
-    try {
-        const { name, email } = req.body;
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { name, email } = req.body;
 
-        if (!name || !email) {
-            return res.status(400).json({ error: "Имя и email обязательны для заполнения" });
-        }
-
-        const existingUser = await User.findOne({ where: { email } });
-        if (existingUser) {
-            return res.status(400).json({ error: "Пользователь с таким email уже существует" });
-        }
-
-        const user = await User.create({ name, email });
-        res.status(201).json(user);
-    } catch (error) {
-        res.status(500).json({ error: "Ошибка при создании пользователя", details: error.message });
+    if (!name || !email) {
+      return res.status(400).json({
+        error: 'Имя и email обязательны для заполнения',
+      });
     }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        error: 'Пользователь с таким email уже существует',
+      });
+    }
+
+    const user = await User.create({ name, email } as CreationAttributes<User>); // ✅ типизировано
+
+    res.status(201).json(user);
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Ошибка при создании пользователя',
+      details: error.message,
+    });
+  }
 });
 
 /**
@@ -90,7 +106,8 @@ router.post("/", async (req, res) => {
  *         required: true
  *         description: ID пользователя
  *         schema:
- *           type: integer
+ *           type: string
+ *           format: uuid
  *     responses:
  *       200:
  *         description: Пользователь помечен как удалённый
@@ -99,19 +116,24 @@ router.post("/", async (req, res) => {
  *       500:
  *         description: Ошибка при удалении пользователя
  */
-router.delete("/:id", async (req, res) => {
-    try {
-        const user = await User.findByPk(req.params.id);
-        if (!user) {
-            return res.status(404).json({ error: "Пользователь не найден" });
-        }
-
-        // Мягкое удаление — установка deletedAt вместо удаления
-        await user.update({ deletedAt: new Date() });
-        res.status(200).json({ message: "Пользователь помечен как удалённый" });
-    } catch (error) {
-        res.status(500).json({ error: "Ошибка при удалении пользователя", details: error.message });
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
     }
+
+    await user.update({ deletedAt: new Date() });
+
+    res.status(200).json({
+      message: 'Пользователь помечен как удалённый',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: 'Ошибка при удалении пользователя',
+      details: error.message,
+    });
+  }
 });
 
-module.exports = router;
+export default router;
