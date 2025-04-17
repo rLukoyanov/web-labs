@@ -1,5 +1,9 @@
 import passport from 'passport';
-import { Strategy as JwtStrategy, ExtractJwt, StrategyOptions } from 'passport-jwt';
+import {
+  Strategy as JwtStrategy,
+  ExtractJwt,
+  StrategyOptions,
+} from 'passport-jwt';
 import { User } from '@models/User';
 import { BlacklistedToken } from '@models/BlacklistedToken';
 import { Request } from 'express';
@@ -21,30 +25,41 @@ const opts: StrategyOptions = {
 };
 
 passport.use(
-  new JwtStrategy(opts, async (req: Request, jwtPayload: JwtPayload, done: (arg0: unknown, arg1: boolean | User) => void | PromiseLike<void>) => {
-    try {
-      // Получаем токен вручную из заголовков
-      const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+  new JwtStrategy(
+    opts,
+    async (
+      req: Request,
+      jwtPayload: JwtPayload,
+      done: (_err: Error | null, _user: User | false | undefined) => void,
+    ) => {
+      try {
+        // Получаем токен вручную из заголовков
+        const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
-      if (!token) return done(null, false);
+        if (!token) {
+          return done(null, false); // Передаем null для ошибки и false для пользователя
+        }
 
-      const isBlacklisted = await BlacklistedToken.findOne({ where: { token } });
+        const isBlacklisted = await BlacklistedToken.findOne({
+          where: { token },
+        });
 
-      if (isBlacklisted) {
-        return done(null, false);
+        if (isBlacklisted) {
+          return done(null, false); // Если токен в черном списке, возвращаем false
+        }
+
+        const user = await User.findByPk(jwtPayload.id);
+
+        if (user) {
+          return done(null, user); // Если пользователь найден, возвращаем его
+        }
+
+        return done(null, false); // Если пользователь не найден, возвращаем false
+      } catch (_err) {
+        return done(_err as Error, false); // В случае ошибки передаем ошибку и false для пользователя
       }
-
-      const user = await User.findByPk(jwtPayload.id);
-
-      if (user) {
-        return done(null, user);
-      }
-
-      return done(null, false);
-    } catch (err) {
-      return done(err, false);
-    }
-  }),
+    },
+  ),
 );
 
 export default passport;

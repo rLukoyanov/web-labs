@@ -6,24 +6,37 @@ import { BlacklistedToken } from '@models/BlacklistedToken';
 
 dotenv.config();
 
-export const sequelize = new Sequelize({
-  database: process.env.DB_NAME || 'postgres',
+const sequelize = new Sequelize({
+  database: process.env.DB_NAME || 'events_app',
   username: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  password: process.env.DB_PASSWORD || 'admin',
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
   dialect: 'postgres',
-  models: [User, Event, BlacklistedToken],
   logging: false,
+  define: {
+    underscored: true,
+    timestamps: true,
+  },
 });
+
+// Initialize models
+sequelize.addModels([User, Event, BlacklistedToken]);
+
+// Initialize associations after models are loaded
+Event.belongsTo(User, { foreignKey: 'createdBy', as: 'user' });
+User.hasMany(Event, { foreignKey: 'createdBy', as: 'events' });
+
+export { sequelize };
 
 // Проверка соединения с БД
 export const authenticateDB = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Успешное подключение к базе данных');
+    console.log('Успешное подключение к базе данных');
   } catch (error) {
-    console.error('❌ Ошибка подключения к базе данных:', error);
+    console.error('Ошибка подключения к базе данных:', error);
+    throw error;
   }
 };
 
@@ -31,8 +44,9 @@ export const authenticateDB = async (): Promise<void> => {
 export const syncDB = async (): Promise<void> => {
   try {
     await sequelize.sync({ force: false });
-    console.log('✅ Таблицы успешно синхронизированы');
+    console.log('Таблицы успешно пересозданы');
   } catch (error) {
-    console.error('❌ Ошибка при синхронизации БД:', error);
+    console.error('Ошибка при синхронизации БД:', error);
+    throw error;
   }
 };

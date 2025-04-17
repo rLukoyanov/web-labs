@@ -11,15 +11,13 @@ interface DecodedToken extends JwtPayload {
   id: number;
 }
 
-// Расширяем Express.Request, чтобы добавить поле auth
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: {
-        user: Partial<User>;
-        token: string;
-      };
-    }
+// Расширяем тип Request, чтобы добавить поле auth
+declare module 'express' {
+  interface Request {
+    auth?: {
+      user: Partial<User>;
+      token: string;
+    };
   }
 }
 
@@ -41,7 +39,10 @@ export const authenticate = async (
 
   try {
     // 1. Проверка токена
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as DecodedToken;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "123",
+    ) as DecodedToken;
 
     // 2. Поиск пользователя
     const user = await User.findOne({
@@ -73,20 +74,20 @@ export const authenticate = async (
     };
 
     next();
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Auth error:', err);
 
-    const response: Record<string, any> = {
+    const response: Record<string, unknown> = {
       success: false,
       message: 'Неверный токен',
     };
 
-    if (err.name === 'TokenExpiredError') {
+    if (err instanceof jwt.TokenExpiredError) {
       response.message = 'Токен истек';
     }
 
     if (process.env.NODE_ENV === 'development') {
-      response.error = err.message;
+      response.error = (err as Error).message; // Приведение ошибки к типу Error
     }
 
     return res.status(401).json(response);

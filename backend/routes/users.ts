@@ -25,15 +25,21 @@ const router = Router();
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const users = await User.findAll({
-      where: literal('"deletedAt" IS NULL') as any, // ✅ обход строгой типизации
+      where: literal('"deletedAt" IS NULL'), // Использование literal без any
     });
 
     res.status(200).json(users);
-  } catch (error: any) {
-    res.status(500).json({
-      error: 'Ошибка при получении пользователей',
-      details: error.message,
-    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        error: 'Ошибка при получении пользователей',
+        details: error.message,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Неизвестная ошибка',
+      });
+    }
   }
 });
 
@@ -68,9 +74,9 @@ router.get('/', async (_req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!name || !email) {
+    if (!name || !email || !password) {
       return res.status(400).json({
         error: 'Имя и email обязательны для заполнения',
       });
@@ -83,14 +89,20 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const user = await User.create({ name, email } as CreationAttributes<User>); // ✅ типизировано
+    const user = await User.create({ name, email, password } as CreationAttributes<User>);
 
     res.status(201).json(user);
-  } catch (error: any) {
-    res.status(500).json({
-      error: 'Ошибка при создании пользователя',
-      details: error.message,
-    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        error: 'Ошибка при создании пользователя',
+        details: error.message,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Неизвестная ошибка',
+      });
+    }
   }
 });
 
@@ -128,11 +140,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     res.status(200).json({
       message: 'Пользователь помечен как удалённый',
     });
-  } catch (error: any) {
-    res.status(500).json({
-      error: 'Ошибка при удалении пользователя',
-      details: error.message,
-    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        error: 'Ошибка при удалении пользователя',
+        details: error.message,
+      });
+    } else {
+      res.status(500).json({
+        error: 'Неизвестная ошибка',
+      });
+    }
   }
 });
 

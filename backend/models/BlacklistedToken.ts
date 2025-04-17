@@ -5,8 +5,6 @@ import {
   DataType,
   PrimaryKey,
   AllowNull,
-  CreatedAt,
-  UpdatedAt,
   BeforeCreate,
 } from 'sequelize-typescript';
 import jwt, { JwtPayload } from 'jsonwebtoken';
@@ -22,19 +20,19 @@ dotenv.config();
  *       type: object
  *       required:
  *         - token
- *         - expiresAt
+ *         - expires_at
  *       properties:
  *         token:
  *           type: string
  *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *         expiresAt:
+ *         expires_at:
  *           type: string
  *           format: date-time
  *           example: "2025-04-14T12:00:00Z"
- *         createdAt:
+ *         created_at:
  *           type: string
  *           format: date-time
- *         updatedAt:
+ *         updated_at:
  *           type: string
  *           format: date-time
  */
@@ -43,23 +41,29 @@ dotenv.config();
   tableName: 'BlacklistedTokens',
   timestamps: true,
 })
-export class BlacklistedToken extends Model<BlacklistedToken> {
-  @PrimaryKey
-  @AllowNull(false)
-  @Column(DataType.STRING(512))
-  token!: string;
+export class BlacklistedToken extends Model {
+  @Column({
+    type: DataType.STRING(512),
+    primaryKey: true,
+    allowNull: false,
+  })
+  declare token: string;
 
-  @AllowNull(false)
-  @Column(DataType.DATE)
-  expiresAt!: Date;
+  @Column({
+    type: DataType.DATE,
+    allowNull: false,
+  })
+  declare expires_at: Date;
 
-  @CreatedAt
-  @Column({ field: 'created_at' })
-  createdAt!: Date;
+  @Column({
+    field: 'created_at',
+  })
+  declare created_at: Date;
 
-  @UpdatedAt
-  @Column({ field: 'updated_at' })
-  updatedAt!: Date;
+  @Column({
+    field: 'updated_at',
+  })
+  declare updated_at: Date;
 
   @BeforeCreate
   static setExpiration(instance: BlacklistedToken): void {
@@ -70,12 +74,16 @@ export class BlacklistedToken extends Model<BlacklistedToken> {
       ) as JwtPayload;
 
       if (decoded.exp) {
-        instance.expiresAt = new Date(decoded.exp * 1000);
+        instance.expires_at = new Date(decoded.exp * 1000);
       } else {
-        instance.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        instance.expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000);
       }
     } catch {
-      instance.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      instance.expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000);
     }
+  }
+
+  static associate(): void {
+    // No associations needed for BlacklistedToken
   }
 }

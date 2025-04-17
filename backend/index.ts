@@ -1,4 +1,3 @@
-import 'module-alias/register';
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -16,14 +15,14 @@ dotenv.config();
 
 const app: Application = express();
 
-// Swagger options
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Event Management API',
       version: '1.0.0',
-      description: 'Документация для API управления мероприятиями и пользователями',
+      description:
+        'Документация для API управления мероприятиями и пользователями',
       contact: {
         name: 'Поддержка',
         email: 'support@example.com',
@@ -33,18 +32,9 @@ const swaggerOptions = {
       },
     },
     tags: [
-      {
-        name: 'Auth',
-        description: 'Аутентификация и авторизация',
-      },
-      {
-        name: 'Users',
-        description: 'Операции с пользователями',
-      },
-      {
-        name: 'Events',
-        description: 'Управление мероприятиями',
-      },
+      { name: 'Auth', description: 'Аутентификация и авторизация' },
+      { name: 'Users', description: 'Операции с пользователями' },
+      { name: 'Events', description: 'Управление мероприятиями' },
     ],
     components: {
       securitySchemes: {
@@ -59,23 +49,13 @@ const swaggerOptions = {
         ErrorResponse: {
           type: 'object',
           properties: {
-            success: {
-              type: 'boolean',
-              example: false,
-            },
-            message: {
-              type: 'string',
-              example: 'Произошла ошибка',
-            },
+            success: { type: 'boolean', example: false },
+            message: { type: 'string', example: 'Произошла ошибка' },
           },
         },
       },
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    security: [{ bearerAuth: [] }],
     servers: [
       {
         url: 'http://localhost:5000',
@@ -87,7 +67,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./backend/routes/*.ts', './backend/models/*.ts'],
+  apis: ['./routes/*.ts', './models/*.ts'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -98,13 +78,15 @@ app.use(express.json());
 app.use(morgan('dev'));
 app.use(passport.initialize());
 
-// Custom logging middleware
+// Custom logger
 app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${req.ip}`);
+  console.log(
+    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${req.ip}`,
+  );
   next();
 });
 
-// Swagger UI
+// Swagger
 app.use(
   '/api-docs',
   swaggerUi.serve,
@@ -138,23 +120,34 @@ app.use('/users', userRoutes);
 app.use('/events', eventRoutes);
 
 // Error handler
-app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(`[ERROR] ${err.stack}`);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
-});
+app.use(
+  (
+    err: Error & { status?: number },
+    _req: Request,
+    res: Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _next: NextFunction,
+  ) => {
+    console.error(`[ERROR] ${err.stack}`);
+    res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'Internal Server Error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    });
+  },
+);
 
 // DB Init
 const initializeDB = async (): Promise<void> => {
   try {
     await authenticateDB();
     await syncDB();
+
     console.log('База данных подключена и синхронизирована');
-  } catch (err: any) {
-    console.error('Ошибка инициализации БД:', err.message);
+  } catch (err: unknown) {
+    const error = err as Error;
+
+    console.error('Ошибка инициализации БД:', error.message);
     process.exit(1);
   }
 };
@@ -166,9 +159,12 @@ initializeDB()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Сервер запущен на http://localhost:${PORT}`);
+
       console.log(`Документация доступна по http://localhost:${PORT}/api-docs`);
     });
   })
-  .catch((err) => {
-    console.error('Ошибка при запуске сервера:', err.message);
+  .catch((err: unknown) => {
+    const error = err as Error;
+
+    console.error('Ошибка при запуске сервера:', error.message);
   });

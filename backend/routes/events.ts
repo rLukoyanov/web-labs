@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { Op, literal, CreationAttributes } from 'sequelize';
+import { literal, CreationAttributes } from 'sequelize';
 import { Event } from '@models/Event';
 import dotenv from 'dotenv';
 
@@ -28,13 +28,18 @@ const router = Router();
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const events = await Event.findAll({
-      where: literal('"deletedAt" IS NULL') as any // ✅ обходим строгую типизацию
+      where: literal('"deleted_at" IS NULL') as unknown as Record<
+        string,
+        unknown
+      >,
     });
     res.status(200).json(events);
-  } catch (error: any) {
+  } catch (error) {
+    const err =
+      error instanceof Error ? error : new Error('Неизвестная ошибка');
     res.status(500).json({
       error: 'Ошибка при получении списка мероприятий',
-      details: error.message,
+      details: err.message,
     });
   }
 });
@@ -75,10 +80,12 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.status(200).json(event);
-  } catch (error: any) {
+  } catch (error) {
+    const err =
+      error instanceof Error ? error : new Error('Неизвестная ошибка');
     res.status(500).json({
       error: 'Ошибка при поиске мероприятия',
-      details: error.message,
+      details: err.message,
     });
   }
 });
@@ -104,8 +111,6 @@ router.get('/:id', async (req: Request, res: Response) => {
  *               date:
  *                 type: string
  *                 format: date-time
- *               createdBy:
- *                 type: string
  *     responses:
  *       201:
  *         description: Мероприятие успешно создано
@@ -118,43 +123,28 @@ router.get('/:id', async (req: Request, res: Response) => {
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { title, description, date, createdBy } = req.body;
-    const eventLimit = parseInt(process.env.EVENTS_LIMIT_PER_DAY || '5', 10);
+    const { title, description, date } = req.body;
 
-    if (!title || !date || !createdBy) {
+    if (!title || !date) {
       return res
         .status(400)
-        .json({ error: 'Название, дата и ID создателя обязательны' });
-    }
-
-    const last24Hours = new Date();
-    last24Hours.setDate(last24Hours.getDate() - 1);
-
-    const eventCount = await Event.count({
-      where: {
-        createdBy,
-        createdAt: { [Op.gte]: last24Hours },
-      },
-    });
-
-    if (eventCount >= eventLimit) {
-      return res.status(429).json({
-        error: `Превышен лимит. Можно создать не более ${eventLimit} мероприятий в день.`,
-      });
+        .json({ error: 'Название, дата обязательны' });
     }
 
     const event = await Event.create({
       title,
       description,
       date,
-      createdBy
-    } as CreationAttributes<Event>); // ✅ типизировано корректно
+    } as CreationAttributes<Event>);
 
     res.status(201).json(event);
-  } catch (error: any) {
+  } catch (error) {
+    const err =
+      error instanceof Error ? error : new Error('Неизвестная ошибка');
+    console.log(err);
     res.status(500).json({
       error: 'Ошибка при создании мероприятия',
-      details: error.message,
+      details: err.message,
     });
   }
 });
@@ -206,10 +196,12 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     await event.update(req.body);
     res.status(200).json(event);
-  } catch (error: any) {
+  } catch (error) {
+    const err =
+      error instanceof Error ? error : new Error('Неизвестная ошибка');
     res.status(500).json({
       error: 'Ошибка при обновлении мероприятия',
-      details: error.message,
+      details: err.message,
     });
   }
 });
@@ -247,10 +239,12 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     await event.update({ deletedAt: new Date() });
     res.status(200).json({ message: 'Мероприятие помечено как удалённое' });
-  } catch (error: any) {
+  } catch (error) {
+    const err =
+      error instanceof Error ? error : new Error('Неизвестная ошибка');
     res.status(500).json({
       error: 'Ошибка при удалении мероприятия',
-      details: error.message,
+      details: err.message,
     });
   }
 });
