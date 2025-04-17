@@ -3,8 +3,6 @@ import {
   Column,
   Model,
   DataType,
-  PrimaryKey,
-  AllowNull,
   BeforeCreate,
 } from 'sequelize-typescript';
 import jwt, { JwtPayload } from 'jsonwebtoken';

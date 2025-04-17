@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "check": "eslint . --ext .ts && tsc --noEmit",
-    "prepare": "husky install",
+    "prepare": "husky",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
