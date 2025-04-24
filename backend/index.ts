@@ -58,7 +58,7 @@ const swaggerOptions = {
     security: [{ bearerAuth: [] }],
     servers: [
       {
-        url: 'http://localhost:5000',
+        url: 'http://localhost:3001',
         description: 'Локальный сервер разработки',
       },
       {
@@ -73,7 +73,9 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "*",
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(passport.initialize());
@@ -153,7 +155,7 @@ const initializeDB = async (): Promise<void> => {
 };
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 initializeDB()
   .then(() => {

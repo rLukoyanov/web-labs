@@ -65,7 +65,7 @@ input {
 
   &:focus {
     outline: none;
-    border-color: #2d79c7;
+    border-color: #c219cb;
     box-shadow: 0 0 0 3px rgba(45, 121, 199, 0.1);
   }
 
@@ -75,7 +75,7 @@ input {
 }
 
 button {
-  background-color: #2d79c7;
+  background-color: #a62dc7;
   color: white;
   border: none;
   padding: 0.8rem;
@@ -87,9 +87,9 @@ button {
   margin-top: 0.5rem;
 
   &:hover {
-    background-color: #1a5a9c;
+    background-color: #801a9c;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(45, 121, 199, 0.3);
+    box-shadow: 0 4px 12px rgba(199, 45, 191, 0.3);
   }
 
   &:active {
@@ -137,7 +137,7 @@ button {
   margin-top: 1rem;
 
   a {
-    color: #2d79c7;
+    color: #962dc7;
     text-decoration: none;
     font-weight: 500;
     margin-left: 0.3rem;

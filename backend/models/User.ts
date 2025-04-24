@@ -24,6 +24,7 @@ import bcrypt from 'bcryptjs';
  *         - name
  *         - email
  *         - password
+ *         - gender
  *       properties:
  *         id:
  *           type: string
@@ -84,6 +85,14 @@ export class User extends Model {
   @UpdatedAt
   @Column({ field: 'updated_at' })
   declare updatedAt: Date;
+
+  @AllowNull(false)
+  @Column(DataType.ENUM('male', 'female'))
+  declare gender: 'male' | 'female';
+
+  @AllowNull(false)
+  @Column(DataType.DATEONLY)
+  declare birthDate: string;
 
   @DeletedAt
   @Column({ type: DataType.DATE, field: 'deleted_at' })

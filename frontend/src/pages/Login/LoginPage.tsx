@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import styles from './LoginPage.module.scss'
-import { login } from '@api/authService'
 import { saveToken } from '@utils/localStorage'
+import { login } from '@api/auth';
 
 interface ValidationErrors {
   email?: string;
@@ -48,7 +48,7 @@ const LoginPage = () => {
       const response = await login({ email, password })
       if (response.success && response.token) {
         saveToken(response.token)
-        navigate('/events')
+        navigate('/')
       } else {
         setErrors({ general: 'Не удалось войти в систему' })
       }

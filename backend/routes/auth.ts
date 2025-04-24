@@ -32,6 +32,9 @@ const router = Router();
  *         password:
  *           type: string
  *           example: "password123"
+ *         gender:
+ *           type: string
+ *           example: "male"
  *     LoginInput:
  *       type: object
  *       required:
@@ -199,6 +202,8 @@ router.post('/register', async (req: Request, res: Response) => {
       name: req.body.name,
       email: req.body.email,
       password: req.body.password,
+      gender: req.body.gender,
+      birthDate: new Date().toISOString()
     };
 
     console.log('Creating user with data:', { ...userData, password: '[HIDDEN]' });
@@ -452,5 +457,120 @@ router.get('/check-auth', authenticate, (req: Request, res: Response) => {
     user: authReq.auth?.user,
   });
 });
+
+/**
+ * @swagger
+ * /auth/update:
+ *   put:
+ *     summary: Обновление данных пользователя
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Новый Иван"
+ *               email:
+ *                 type: string
+ *                 example: "newivan@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "newpassword123"
+ *               gender:
+ *                 type: string
+ *                 example: "male"
+ *               birthDate:
+ *                 type: string
+ *                 format: date
+ *                 example: "1990-01-01"
+ *     responses:
+ *       200:
+ *         description: Обновление успешно
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Ошибка валидации
+ *       500:
+ *         description: Ошибка сервера
+ */
+const validateUpdateInput = (data: Partial<RegisterInput>) => {
+  const errors: Record<string, string> = {};
+
+  if (data.name !== undefined && !data.name.trim()) {
+    errors.name = 'Имя не может быть пустым';
+  }
+  if (data.email !== undefined && !data.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    errors.email = 'Некорректный email';
+  }
+  if (data.password !== undefined && data.password.length < 6) {
+    errors.password = 'Пароль должен содержать минимум 6 символов';
+  }
+
+  return {
+    errors,
+    isValid: Object.keys(errors).length === 0,
+  };
+};
+
+
+
+router.put('/update', authenticate, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.auth?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Не авторизован' });
+    }
+
+    const { errors, isValid } = validateUpdateInput(req.body);
+    if (!isValid) {
+      return res.status(400).json({ success: false, errors });
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+    }
+
+    if (req.body.password) {
+      req.body.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    const updatableFields = ['name', 'email', 'password', 'gender', 'birthDate'];
+    updatableFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        (user as any)[field] = req.body[field];
+      }
+    });
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Данные пользователя обновлены',
+      user: {
+        ...user.dataValues
+      },
+    });
+  } catch (error) {
+    const err = error as Error;
+    console.error('Ошибка обновления пользователя:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Ошибка сервера',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+  }
+});
+
 
 export default router;

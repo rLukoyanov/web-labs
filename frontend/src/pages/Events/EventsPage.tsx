@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import styles from './EventsPage.module.scss';
-import { fetchEvents } from '@api/eventService';
 import { getToken } from '@utils/localStorage';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { fetchEvents } from '../../store/slices/eventSlice';
 
 interface Event {
   id: string;
@@ -13,6 +14,7 @@ interface Event {
 }
 
 const EventsPage = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -22,31 +24,35 @@ const EventsPage = () => {
   const token = getToken();
 
   useEffect(() => {
-    if (!token) {
-      console.log('No token found, redirecting to login');
-      navigate('/login');
-      return;
-    }
+    dispatch(fetchEvents());
+  }, [dispatch]);
 
-    const loadEvents = async () => {
-      try {
-        console.log('Loading events...');
-        setIsLoading(true);
-        setError('');
-        const data = await fetchEvents(showDeleted, token);
-        console.log('Events loaded:', data);
-        setEvents(data);
-      } catch (err: any) {
-        console.error('Error loading events:', err);
-        console.error('Error response:', err.response);
-        setError(err.response?.data?.message || 'Ошибка при загрузке мероприятий');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // useEffect(() => {
+  //   if (!token) {
+  //     console.log('No token found, redirecting to login');
+  //     navigate('/login');
+  //     return;
+  //   }
 
-    loadEvents();
-  }, [showDeleted, token, navigate]);
+  //   const loadEvents = async () => {
+  //     try {
+  //       console.log('Loading events...');
+  //       setIsLoading(true);
+  //       setError('');
+  //       const data = await fetchEvents(showDeleted, token);
+  //       console.log('Events loaded:', data);
+  //       setEvents(data);
+  //     } catch (err: any) {
+  //       console.error('Error loading events:', err);
+  //       console.error('Error response:', err.response);
+  //       setError(err.response?.data?.message || 'Ошибка при загрузке мероприятий');
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   loadEvents();
+  // }, [showDeleted, token, navigate]);
 
   if (isLoading) {
     return (
@@ -62,17 +68,6 @@ const EventsPage = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2>Список мероприятий</h2>
-        <div className={styles.controls}>
-          <label className={styles.toggle}>
-            <input
-              type="checkbox"
-              checked={showDeleted}
-              onChange={() => setShowDeleted(!showDeleted)}
-            />
-            Показать удалённые мероприятия
-          </label>
-        </div>
       </div>
 
       {error && (

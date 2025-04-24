@@ -1,8 +1,8 @@
 // frontend/src/pages/Register/RegisterPage.tsx
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { register } from '@api/authService'
 import styles from './RegisterPage.module.scss'
+import { register } from '@api/auth';
 
 interface ValidationErrors {
   name?: string;
