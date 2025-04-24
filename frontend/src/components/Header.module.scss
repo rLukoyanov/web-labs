@@ -1,0 +1,39 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+  }
+  
+  .nav {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  a {
+    color: white;
+    text-decoration: none;
+  }
+  
+  button {
+    background: transparent;
+    border: 1px solid white;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+  }
+  
+  .welcome {
+    margin-right: 1rem;
+  }
+  
